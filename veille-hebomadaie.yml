@@ -21,8 +21,8 @@ jobs:
       - name: Envoyer le rapport par email
         env:
           GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+        shell: python
         run: |
-          python3 - <<'EOF'
           import smtplib
           from email.mime.text import MIMEText
           from email.mime.multipart import MIMEMultipart
@@ -56,20 +56,15 @@ jobs:
           msg['To'] = destinataire
           msg['Subject'] = f'Veille Orthodontique Reuni Smiles — {date.today().strftime("%d/%m/%Y")}'
 
-          body = f"""Bonjour Pierre,
-
-Voici le rapport hebdomadaire de veille orthodontique de Réuni Smiles.
-
---- NOUVEAUTÉS DE LA SEMAINE ---
-
-{resume_semaine}
-
---- FIN DU RAPPORT ---
-
-Le fichier complet est joint à cet email.
-
-Bonne semaine,
-Votre agent de veille Claude"""
+          body = (
+              'Bonjour Pierre,\n\n'
+              'Voici le rapport hebdomadaire de veille orthodontique de Réuni Smiles.\n\n'
+              '--- NOUVEAUTÉS DE LA SEMAINE ---\n\n'
+              + resume_semaine +
+              '\n\n--- FIN DU RAPPORT ---\n\n'
+              'Le fichier complet est joint à cet email.\n\n'
+              'Bonne semaine,\nVotre agent de veille Claude'
+          )
 
           msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
@@ -83,4 +78,3 @@ Votre agent de veille Claude"""
               smtp.login(expediteur, mot_de_passe)
               smtp.send_message(msg)
               print('Email envoyé avec succès.')
-          EOF

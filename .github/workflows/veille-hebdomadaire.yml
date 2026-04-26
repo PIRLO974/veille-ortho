@@ -1,86 +1,40 @@
 name: Veille Orthodontique Hebdomadaire
-
 on:
   schedule:
     - cron: '0 7 * * 3'
   workflow_dispatch:
-
 jobs:
   envoyer-rapport:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Envoyer le rapport par email
+      - name: Envoyer email
         env:
           GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+        shell: python
         run: |
-          python3 - <<'EOF'
-          import smtplib
+          import smtplib, os
           from email.mime.text import MIMEText
           from email.mime.multipart import MIMEMultipart
           from email.mime.base import MIMEBase
           from email import encoders
           from datetime import date
-          import os
-
           with open('output/veille_orthodontie_2024_2025.md', 'r', encoding='utf-8') as f:
               contenu = f.read()
-
-          lignes = contenu.split('\n')
-          section_semaine = []
-          capture = False
-          for ligne in lignes:
-              if 'Semaine du' in ligne and str(date.today().year) in ligne:
-                  capture = True
-              elif ligne.startswith('###') and capture:
-                  break
-              if capture:
-                  section_semaine.append(ligne)
-
-          resume_semaine = '\n'.join(section_semaine) if section_semaine else 'Aucune nouvelle étude cette semaine.'
-
-          expediteur = 'drpierrerouquette@gmail.com'
-          destinataire = 'drpierrerouquette@gmail.com'
-          mot_de_passe = os.environ['GMAIL_PASSWORD']
-
           msg = MIMEMultipart()
-          msg['From'] = expediteur
-          msg['To'] = destinataire
-          msg['Subject'] = f'Veille Orthodontique Reuni Smiles — {date.today().strftime("%d/%m/%Y")}'
-
-          body = f"""Bonjour Pierre,
-
-Voici le rapport hebdomadaire de veille orthodontique de Réuni Smiles.
-
---- NOUVEAUTÉS DE LA SEMAINE ---
-
-{resume_semaine}
-
---- FIN DU RAPPORT ---
-
-Le fichier complet est joint à cet email.
-
-Bonne semaine,
-Votre agent de veille Claude"""
-
-          msg.attach(MIMEText(body, 'plain', 'utf-8'))
-
+          msg['From'] = 'drpierrerouquette@gmail.com'
+          msg['To'] = 'drpierrerouquette@gmail.com'
+          msg['Subject'] = 'Veille Orthodontique Reuni Smiles ' + date.today().strftime('%d/%m/%Y')
+          msg.attach(MIMEText('Bonjour Pierre,\n\nVeille orthodontique en piece jointe.\n\nVotre agent Claude', 'plain', 'utf-8'))
           att = MIMEBase('application', 'octet-stream')
           att.set_payload(contenu.encode('utf-8'))
           encoders.encode_base64(att)
-          att.add_header('Content-Disposition', f'attachment; filename=veille_orthodontie_{date.today().strftime("%Y-%m-%d")}.md')
+          att.add_header('Content-Disposition', 'attachment; filename=veille.md')
           msg.attach(att)
-
           with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-              smtp.login(expediteur, mot_de_passe)
+              smtp.login('drpierrerouquette@gmail.com', os.environ['GMAIL_PASSWORD'])
               smtp.send_message(msg)
-              print('Email envoyé avec succès.')
-          EOF
+              print('OK')
